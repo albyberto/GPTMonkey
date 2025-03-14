@@ -13,7 +13,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Lapo\Lapo.csproj"/>
+      <ProjectReference Include="..\Lapo.Mud\Lapo.Mud.csproj" />
     </ItemGroup>
 
 </Project>
