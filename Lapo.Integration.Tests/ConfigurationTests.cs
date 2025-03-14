@@ -7,14 +7,15 @@ namespace Lapo.Integration.Tests;
 [TestClass]
 public class ConfigurationServiceTests
 {
-    const string Path = "appsettings.test.json";
+    const string Path = "appsettings.test";
+    const string PathWithExtension = $"{Path}.json";
     const string Section = "Test";
 
     [TestInitialize]
     public async Task SetUp()
     {
-        if (File.Exists(Path)) File.Delete(Path);
-        await File.WriteAllTextAsync(Path, "{}");
+        if (File.Exists(PathWithExtension)) File.Delete(PathWithExtension);
+        await File.WriteAllTextAsync(PathWithExtension, "{}");
     }
 
     [TestCleanup]
@@ -22,6 +23,10 @@ public class ConfigurationServiceTests
     {
         if (File.Exists(Path)) File.Delete(Path);
     }
+
+    [TestMethod]
+    public void Constructor_ShouldThrowFileNotFoundExceptionIfFileDoesNotExist() =>
+        ThrowsExactly<FileNotFoundException>(() => _ = new ConfigurationService("nonexistent.json", "Section"));
 
     [TestMethod]
     public async Task UpsertAsync_ShouldAddNewValue()
@@ -37,7 +42,7 @@ public class ConfigurationServiceTests
                                 }
                                 """;
 
-        var actual = await File.ReadAllTextAsync(Path);
+        var actual = await GetActualAsync();
         AreEqual(expected.Trim(), actual.Trim());
     }
 
@@ -56,7 +61,7 @@ public class ConfigurationServiceTests
                                 }
                                 """;
 
-        var actual = await File.ReadAllTextAsync(Path);
+        var actual = await GetActualAsync();
         AreEqual(expected.Trim(), actual.Trim());
     }
 
@@ -73,7 +78,7 @@ public class ConfigurationServiceTests
                                 }
                                 """;
 
-        var actual = await File.ReadAllTextAsync(Path);
+        var actual = await GetActualAsync();
         AreEqual(expected.Trim(), actual.Trim());
     }
 
@@ -94,7 +99,7 @@ public class ConfigurationServiceTests
                                 }
                                 """;
 
-        var actual = await File.ReadAllTextAsync(Path);
+        var actual = await GetActualAsync();
         AreEqual(expected.Trim(), actual.Trim());
     }
 
@@ -115,7 +120,7 @@ public class ConfigurationServiceTests
                                 }
                                 """;
 
-        var actual = await File.ReadAllTextAsync(Path);
+        var actual = await GetActualAsync();
         AreEqual(expected.Trim(), actual.Trim());
     }
 
@@ -134,13 +139,9 @@ public class ConfigurationServiceTests
                                 }
                                 """;
 
-        var actual = await File.ReadAllTextAsync(Path);
+        var actual = await GetActualAsync();
         AreEqual(expected.Trim(), actual.Trim());
     }
 
-    [TestMethod]
-    public void Constructor_ShouldThrowFileNotFoundExceptionIfFileDoesNotExist()
-    {
-        ThrowsExactly<FileNotFoundException>(() => _ = new ConfigurationService("nonexistent.json", "Section"));
-    }
+    static Task<string> GetActualAsync() => File.ReadAllTextAsync(PathWithExtension);
 }

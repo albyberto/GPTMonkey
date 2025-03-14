@@ -9,6 +9,7 @@ public class ConfigurationService
 
     public ConfigurationService(string path, string section)
     {
+        path = $"{path}.json";
         if (!File.Exists(path)) throw new FileNotFoundException("Configuration file not found.", path);
 
         _path = path;
