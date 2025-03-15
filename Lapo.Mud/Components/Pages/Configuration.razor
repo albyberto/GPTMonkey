@@ -1,19 +1,32 @@
 ﻿@page "/config"
 
-<PageTitle>Counter</PageTitle>
+<PageTitle>Configuration</PageTitle>
 
-<MudText Typo="Typo.h3" GutterBottom="true">Counter</MudText>
+<MudText Typo="Typo.h3" GutterBottom="true">Configuration</MudText>
 
-<MudText Typo="Typo.body1" Class="mb-4">Current count: @currentCount</MudText>
+<MudPaper Class="d-flex align-items-center mb-4" Elevation="0">
+    <MudTextField 
+        @bind-Value="_newItem" 
+        Label="New Item" 
+        Variant="Variant.Outlined" 
+        Required="true" 
+        Class="flex-grow-1" />
+    <MudButton 
+        OnClick="AddItem" 
+        Class="ms-2" 
+        Color="Color.Primary" 
+        Variant="Variant.Outlined" 
+        IconClass="@Icons.Material.Outlined.Add">Add</MudButton>
+</MudPaper>
 
-<MudButton Color="Color.Primary" Variant="Variant.Filled" @onclick="IncrementCount">Click me</MudButton>
-
-@code {
-    private int currentCount = 0;
-
-    private void IncrementCount()
+<MudList T="string">
+    @foreach (var item in _items)
     {
-        currentCount++;
+        <MudListItem>
+            <div class="d-flex justify-content-between w-100 align-items-center">
+                <MudButton OnClick="@(() => RemoveItem(item))" Color="Color.Error" Variant="Variant.Text" Class="me-4">Delete</MudButton>
+                <MudText>@item</MudText>
+            </div>
+        </MudListItem>
     }
-
-}
+</MudList>

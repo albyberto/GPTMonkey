@@ -1,5 +1,6 @@
 using MudBlazor.Services;
 using Lapo.Mud.Components;
+using Lapo.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +10,8 @@ builder.Services.AddMudServices();
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.AddSingleton(_ => new ConfigurationService("appsettings", "Configuration"));
 
 var app = builder.Build();
 

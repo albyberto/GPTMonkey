@@ -16,6 +16,34 @@ public class ConfigurationService
         _section = section;
     }
 
+    public async Task<T?> ReadAsync<T>(string key)
+    {
+        var json = await File.ReadAllTextAsync(_path);
+        var jsonObj = JObject.Parse(json);
+        var sectionPath = _section.Split(':');
+        var keyPath = key.Split(':');
+
+        JToken targetSection = jsonObj;
+
+        foreach (var section in sectionPath)
+        {
+            if (targetSection[section] is not JObject obj) return default;
+            targetSection = obj;
+        }
+
+        foreach (var part in keyPath[..^1])
+        {
+            if (targetSection[part] is not JObject obj) return default;
+            targetSection = obj;
+        }
+
+        var token = targetSection[keyPath[^1]];
+        
+        return token is null 
+            ? default 
+            : token.ToObject<T?>(); // Usa T? per trattare correttamente il tipo nullable
+    }
+    
     public async Task UpsertAsync<T>(string key, T value)
     {
         var json = await File.ReadAllTextAsync(_path);

@@ -45,6 +45,47 @@ public class ConfigurationServiceTests
         var actual = await GetActualAsync();
         AreEqual(expected.Trim(), actual.Trim());
     }
+    
+    [TestMethod]
+    public async Task UpsertAsync_ShouldAddNewEnumerableValueWithOneElements()
+    {
+        var sut = new ConfigurationService(Path, Section);
+        await sut.UpsertAsync<List<string>>("NewKey", ["Value"]);
+
+        const string expected = """
+                                {
+                                  "Test": {
+                                    "NewKey": [
+                                      "Value"
+                                    ]
+                                  }
+                                }
+                                """;
+
+        var actual = await GetActualAsync();
+        AreEqual(expected.Trim(), actual.Trim());
+    }
+    
+    [TestMethod]
+    public async Task UpsertAsync_ShouldAddNewEnumerableValueWithTwoElements()
+    {
+        var sut = new ConfigurationService(Path, Section);
+        await sut.UpsertAsync<List<string>>("NewKey", ["Value1", "Value2"]);
+
+        const string expected = """
+                                {
+                                  "Test": {
+                                    "NewKey": [
+                                      "Value1",
+                                      "Value2"
+                                    ]
+                                  }
+                                }
+                                """;
+
+        var actual = await GetActualAsync();
+        AreEqual(expected.Trim(), actual.Trim());
+    }
 
     [TestMethod]
     public async Task UpsertAsync_ShouldUpdateExistingValue()
