@@ -21,13 +21,16 @@ public class CsvService
     {
         if (records.Count == 0) return;
 
-        using var writer = new StreamWriter(_path);
+        var fileExists = File.Exists(_path);
+        using var writer = new StreamWriter(_path, append: true);
         using var csv = new CsvWriter(writer, new CsvConfiguration(CultureInfo.InvariantCulture));
 
-        var firstRecord = (IDictionary<string, object>)records[0];
-
-        foreach (var header in firstRecord.Keys) csv.WriteField(header);
-        csv.NextRecord();
+        if (!fileExists)
+        {
+            var firstRecord = (IDictionary<string, object>)records[0];
+            foreach (var header in firstRecord.Keys) csv.WriteField(header);
+            csv.NextRecord();
+        }
 
         foreach (var recordDict in records.Select(record => (IDictionary<string, object>)record))
         {

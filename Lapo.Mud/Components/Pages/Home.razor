@@ -41,68 +41,70 @@
          _prevScan = new(_scan);
     }
 
-    (Dictionary<string, List<dynamic>> Added, Dictionary<string, List<dynamic>> Removed, Dictionary<string, List<(dynamic OldRow, dynamic NewRow)>> Updated) LoadDiff()
+(Dictionary<string, List<dynamic>> Added, Dictionary<string, List<dynamic>> Removed, Dictionary<string, List<dynamic>> Updated) LoadDiff()
+{
+    var addedRows = new Dictionary<string, List<dynamic>>();
+    var removedRows = new Dictionary<string, List<dynamic>>();
+    var updatedRows = new Dictionary<string, List<dynamic>>();
+
+    foreach (var table in _prevScan.Keys)
     {
-        var addedRows = new Dictionary<string, List<dynamic>>();
-        var removedRows = new Dictionary<string, List<dynamic>>();
-        var updatedRows = new Dictionary<string, List<(dynamic OldRow, dynamic NewRow)>>();
+        if (!_scan.ContainsKey(table)) continue;
 
-        foreach (var table in _prevScan.Keys)
+        var prevRows = _prevScan[table];
+        var currentRows = _scan[table];
+
+        var prevDict = prevRows.ToDictionary(row => row.Id);
+        var currentDict = currentRows.ToDictionary(row => row.Id);
+
+        // Righe aggiunte
+        var added = currentRows.Where(row => !prevDict.ContainsKey(row.Id)).ToList();
+        foreach (var row in added) AddOperation(row, table, "ADDED");
+        
+        if (added.Any()) addedRows[table] = added;
+
+        // Righe rimosse
+        var removed = prevRows.Where(row => !currentDict.ContainsKey(row.Id)).ToList();
+        foreach (var row in removed) AddOperation(row, table, "DELETED");
+        
+        if (removed.Any()) removedRows[table] = removed;
+
+        // Righe modificate
+        var updated = new List<dynamic>();
+
+        foreach (var row in currentRows)
         {
-            if (!_scan.ContainsKey(table)) continue;
+            if (!prevDict.TryGetValue(row.Id, out dynamic oldRow)) continue;
 
-            var prevRows = _prevScan[table];
-            var currentRows = _scan[table];
+            var oldRowDict = (IDictionary<string, object>)oldRow;
+            var newRowDict = (IDictionary<string, object>)row;
 
-            var prevDict = prevRows.ToDictionary(row => row.Id);
-            var currentDict = currentRows.ToDictionary(row => row.Id);
+            var isDifferent = oldRowDict.Keys.Any(key => !newRowDict.ContainsKey(key) || !Equals(oldRowDict[key], newRowDict[key]));
 
-            // Righe aggiunte
-            var added = currentRows.Where(row => !prevDict.ContainsKey(row.Id)).ToList();
-            if (added.Any()) addedRows[table] = added;
+            if (!isDifferent) continue;
+            
+            AddOperation(oldRow, table, "UPDATED OLD");
+            AddOperation(row, table, "UPDATED NEW");
 
-            // Righe rimosse
-            var removed = prevRows.Where(row => !currentDict.ContainsKey(row.Id)).ToList();
-            if (removed.Any()) removedRows[table] = removed;
-
-            var updated = new List<(dynamic OldRow, dynamic NewRow)>();
-
-            foreach (var row in currentRows)
-            {
-                if (!prevDict.TryGetValue(row.Id, out dynamic oldRow)) continue;
-
-                var oldRowDict = (IDictionary<string, object>)oldRow;
-                var newRowDict = (IDictionary<string, object>)row;
-
-                var isDifferent = oldRowDict.Keys.Any(key => !newRowDict.ContainsKey(key) || !Equals(oldRowDict[key], newRowDict[key]));
-
-                if (isDifferent) updated.Add((OldRow: oldRow, NewRow: row));
-            }
-
-            if (updated.Any()) updatedRows[table] = updated;
+            updated.Add(oldRow);
+            updated.Add(row);
         }
 
-        return (addedRows, removedRows, updatedRows);
+        if (updated.Any()) updatedRows[table] = updated;
     }
 
-    static List<dynamic> Merge((Dictionary<string, List<dynamic>> Added, Dictionary<string, List<dynamic>> Removed, Dictionary<string, List<(dynamic OldRow, dynamic NewRow)>> Updated) elements)
+    return (addedRows, removedRows, updatedRows);
+}
+
+    static List<dynamic> Merge((Dictionary<string, List<dynamic>> Added, Dictionary<string, List<dynamic>> Removed, Dictionary<string, List<dynamic>> Updated) elements)
     {
         var mergedList = new List<dynamic>();
 
-        foreach (var table in elements.Added.Keys)
-        {
-            mergedList.AddRange(elements.Added[table].Select(row => AddOperation(row, table, "ADD")));
-        }
+        foreach (var table in elements.Added.Keys) mergedList.AddRange(elements.Added[table]);
 
-        foreach (var table in elements.Removed.Keys)
-        {
-            mergedList.AddRange(elements.Removed[table].Select(row => AddOperation(row, table, "DELETE")));
-        }
+        foreach (var table in elements.Removed.Keys) mergedList.AddRange(elements.Removed[table]);
 
-        foreach (var table in elements.Updated.Keys)
-        {
-            mergedList.AddRange(elements.Updated[table].Select(pair => AddOperation(pair.NewRow, table, "UPDATE")));
-        }
+        foreach (var table in elements.Updated.Keys) mergedList.AddRange(elements.Updated[table]);
 
         return mergedList
             .OrderBy(row => row.TableName)
@@ -110,19 +112,10 @@
             .ToList();
     }
 
-    static dynamic AddOperation(dynamic row, string tableName, string operation)
+    static void AddOperation(dynamic row, string tableName, string operation)
     {
-        IDictionary<string, object> expando = new System.Dynamic.ExpandoObject();
-    
-        foreach (var prop in (IDictionary<string, object>)row)
-        {
-            expando[prop.Key] = prop.Value;
-        }
-    
+        var expando = (IDictionary<string, object>)row;
         expando["TableName"] = tableName;
         expando["Operation"] = operation;
-
-        return expando;
     }
-
 }
