@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Data;
+using System.Text;
 using Dapper;
 using Lapo.Enums;
 using Microsoft.Data.SqlClient;
@@ -7,10 +8,9 @@ namespace Lapo.Services;
 
 public class DatabaseService(IConfiguration configuration)
 {
-    readonly string _connectionString = configuration.GetConnectionString("DefaultConnection")
-                                        ?? throw new ArgumentNullException(nameof(configuration), "Connection string not found.");
+    readonly string _connectionString = configuration.GetConnectionString("DefaultConnection") ?? throw new ArgumentNullException(nameof(configuration), "Connection string not found.");
 
-    public async Task<List<dynamic>> QueryAsync(string table, string? where = null, int? top = null, OrderByDirection direction = OrderByDirection.Desc)
+    public async Task<DataTable> QueryAsync(string table, string? where = null, int? top = null, OrderByDirection direction = OrderByDirection.Desc)
     {
         if (string.IsNullOrWhiteSpace(table))
             throw new ArgumentException("Table name cannot be null or empty.", nameof(table));
@@ -27,14 +27,19 @@ public class DatabaseService(IConfiguration configuration)
 
         var primaryKey = await connection.QueryFirstOrDefaultAsync<string>(keyQuery, new { TableName = table });
 
-        if (string.IsNullOrEmpty(primaryKey)) throw new KeyNotFoundException($"Primary key not found for the table '{table}'.");
+        if (string.IsNullOrEmpty(primaryKey))
+            throw new KeyNotFoundException($"Primary key not found for the table '{table}'.");
 
         var queryBuilder = BuildQuery(table, primaryKey, direction, top, where);
-        var rows = (await connection.QueryAsync<dynamic>(queryBuilder)).ToList();
+        await using var reader = await connection.ExecuteReaderAsync(queryBuilder);
 
-        foreach (var dictionaryRow in rows.Select(row => (IDictionary<string, object>)row)) dictionaryRow["Id"] = dictionaryRow[primaryKey];
+        var dataTable = new DataTable();
+        dataTable.Load(reader);
+        
+        dataTable.Columns.Add("Id", typeof(int));
+        foreach (DataRow row in dataTable.Rows) row["Id"] = row[primaryKey];
 
-        return rows;
+        return dataTable;
     }
     
     static string BuildQuery(string table, string primary, OrderByDirection direction, int? top = null,
