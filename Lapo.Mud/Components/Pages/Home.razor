@@ -65,13 +65,21 @@
             var removed = prevRows.Where(row => !currentDict.ContainsKey(row.Id)).ToList();
             if (removed.Any()) removedRows[table] = removed;
 
-            // // Righe aggiornate
-            // var updated = currentRows
-            //     .Where(row => prevDict.TryGetValue(row.Id, out var oldRow) && !oldRow.Equals(row))
-            //     .Select(row => (OldRow: prevDict[row.Id], NewRow: row))
-            //     .ToList();
+            var updated = new List<(dynamic OldRow, dynamic NewRow)>();
 
-            // if (updated.Any()) updatedRows[table] = updated;
+            foreach (var row in currentRows)
+            {
+                if (!prevDict.TryGetValue(row.Id, out dynamic oldRow)) continue;
+
+                var oldRowDict = (IDictionary<string, object>)oldRow;
+                var newRowDict = (IDictionary<string, object>)row;
+
+                var isDifferent = oldRowDict.Keys.Any(key => !newRowDict.ContainsKey(key) || !Equals(oldRowDict[key], newRowDict[key]));
+
+                if (isDifferent) updated.Add((OldRow: oldRow, NewRow: row));
+            }
+
+            if (updated.Any()) updatedRows[table] = updated;
         }
 
         return (addedRows, removedRows, updatedRows);
