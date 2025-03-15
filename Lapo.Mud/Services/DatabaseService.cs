@@ -10,9 +10,10 @@ public class DatabaseService(IConfiguration configuration)
     readonly string _connectionString = configuration.GetConnectionString("DefaultConnection")
                                         ?? throw new ArgumentNullException(nameof(configuration), "Connection string not found.");
 
-    public async Task<IEnumerable<dynamic>> QueryAsync(string table, string? where = null, int? top = null, OrderByDirection direction = OrderByDirection.Desc)
+    public async Task<List<dynamic>> QueryAsync(string table, string? where = null, int? top = null, OrderByDirection direction = OrderByDirection.Desc)
     {
-        if (string.IsNullOrWhiteSpace(table)) throw new ArgumentException("Table name cannot be null or empty.", nameof(table));
+        if (string.IsNullOrWhiteSpace(table))
+            throw new ArgumentException("Table name cannot be null or empty.", nameof(table));
 
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync();
@@ -24,15 +25,18 @@ public class DatabaseService(IConfiguration configuration)
                                     AND OBJECTPROPERTY(OBJECT_ID(CONSTRAINT_SCHEMA + '.' + CONSTRAINT_NAME), 'IsPrimaryKey') = 1
                                 """;
 
-        var key = await connection.QueryFirstOrDefaultAsync<string>(keyQuery, new { TableName = table });
+        var primaryKey = await connection.QueryFirstOrDefaultAsync<string>(keyQuery, new { TableName = table });
 
-        if (string.IsNullOrEmpty(key)) throw new KeyNotFoundException($"Primary key not found for the table '{table}'.");
+        if (string.IsNullOrEmpty(primaryKey)) throw new KeyNotFoundException($"Primary key not found for the table '{table}'.");
 
-        var queryBuilder = BuildQuery(table, key, direction, top, where);
+        var queryBuilder = BuildQuery(table, primaryKey, direction, top, where);
+        var rows = (await connection.QueryAsync<dynamic>(queryBuilder)).ToList();
 
-        return await connection.QueryAsync<dynamic>(queryBuilder);
+        foreach (var dictionaryRow in rows.Select(row => (IDictionary<string, object>)row)) dictionaryRow["Id"] = dictionaryRow[primaryKey];
+
+        return rows;
     }
-
+    
     static string BuildQuery(string table, string primary, OrderByDirection direction, int? top = null,
         string? where = null)
     {

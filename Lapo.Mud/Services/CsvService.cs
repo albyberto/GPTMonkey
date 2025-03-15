@@ -12,7 +12,7 @@ public class CsvService
     {
         path = $"{path}.csv";
 
-        if (!File.Exists(path)) throw new FileNotFoundException("Report file not found.", path);
+        if (!File.Exists(path)) File.Create(path);
 
         _path = path;
     }

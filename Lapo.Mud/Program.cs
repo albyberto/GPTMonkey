@@ -12,6 +12,8 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddSingleton(_ => new ConfigurationService("appsettings", "Configuration"));
+builder.Services.AddSingleton(_ => new CsvService("report"));
+builder.Services.AddScoped<DatabaseService>();
 
 var app = builder.Build();
 
