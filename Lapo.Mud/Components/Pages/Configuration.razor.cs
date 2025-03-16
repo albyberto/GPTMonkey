@@ -1,4 +1,4 @@
-﻿using Lapo.Services;
+﻿using Lapo.Mud.Services;
 using Microsoft.AspNetCore.Components;
 
 namespace Lapo.Mud.Components.Pages;

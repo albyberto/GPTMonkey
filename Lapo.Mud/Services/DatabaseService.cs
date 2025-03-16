@@ -1,10 +1,10 @@
 ﻿using System.Data;
 using System.Text;
 using Dapper;
-using Lapo.Enums;
+using Lapo.Mud.Enums;
 using Microsoft.Data.SqlClient;
 
-namespace Lapo.Services;
+namespace Lapo.Mud.Services;
 
 public class DatabaseService(IConfiguration configuration)
 {

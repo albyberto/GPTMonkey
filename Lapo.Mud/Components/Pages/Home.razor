@@ -1,6 +1,6 @@
 ﻿@page "/"
 @using System.Data
-@using Lapo.Services
+@using Lapo.Mud.Services
 
 <PageTitle>Home</PageTitle>
 
@@ -14,6 +14,8 @@
 
     readonly Dictionary<string, DataTable> _lastScan = new();
     Dictionary<string, DataTable> _previousScan = new();
+    
+    List<DataRow> _acc = [];
 
     protected override Task OnInitializedAsync() => ScanAsync();
 
@@ -31,6 +33,7 @@
         if (!_previousScan.Any())
         {
             _previousScan = new(_lastScan);
+            _acc = _lastScan.SelectMany(x => x.Value.AsEnumerable()).ToList();
             return;
         }
 
@@ -38,22 +41,25 @@
         CsvService.Write(diffResult);
 
         _previousScan = new(_lastScan);
+        _acc = _lastScan.SelectMany(x => x.Value.AsEnumerable()).ToList();
     }
 
-    static Dictionary<string, List<DataRow>> LoadDiff(Dictionary<string, DataTable> previousScan, Dictionary<string, DataTable> lastScan)
+    static List<DataRow> LoadDiff(Dictionary<string, DataTable> previousScan, Dictionary<string, DataTable> lastScan)
     {
-        var diff = new Dictionary<string, List<DataRow>>();
+        var acc = new List<DataRow>();
 
         foreach (var table in lastScan.Keys)
         {
-            diff[table] = [];
-
             if (!previousScan.TryGetValue(table, out var previous)) continue;
 
+            previous.Columns.Add("Table", typeof(string));
+            previous.Columns["Table"]?.SetOrdinal(0);
             previous.Columns.Add("Operation", typeof(string));
-            previous.Columns["Operation"]?.SetOrdinal(0);
+            previous.Columns["Operation"]?.SetOrdinal(1);
 
             var last = lastScan[table];
+            last.Columns.Add("Table", typeof(string));
+            last.Columns["Table"]?.SetOrdinal(0);
             last.Columns.Add("Operation", typeof(string));
             last.Columns["Operation"]?.SetOrdinal(0);
 
@@ -72,11 +78,11 @@
             var updated = lastRows.Where(row => previousDict.ContainsKey(row["Id"]) && !row.ItemArray.SequenceEqual(previousDict[row["Id"]].ItemArray)).ToList();
             foreach (var row in updated) row["Operation"] = "UPDATED";
             
-            diff[table].AddRange(added);
-            diff[table].AddRange(removed);
-            diff[table].AddRange(updated);
+            acc.AddRange(added);
+            acc.AddRange(removed);
+            acc.AddRange(updated);
         }
 
-        return diff;
+        return acc.OrderBy(x => x["Table"]).ThenBy(x => x["Id"]).ToList();
     }
 }

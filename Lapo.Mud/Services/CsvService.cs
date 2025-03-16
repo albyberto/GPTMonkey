@@ -3,7 +3,7 @@ using System.Globalization;
 using CsvHelper;
 using CsvHelper.Configuration;
 
-namespace Lapo.Services;
+namespace Lapo.Mud.Services;
 
 public class CsvService
 {
@@ -18,38 +18,22 @@ public class CsvService
         _path = path;
     }
 
-    public void Write(Dictionary<string, List<DataRow>> records)
+    public void Write(List<DataRow> rows)
     {
-        if (records.Count == 0) return;
+        if (rows.Count == 0) return;
 
         using var writer = new StreamWriter(_path, append: true);
         using var csv = new CsvWriter(writer, new CsvConfiguration(CultureInfo.InvariantCulture));
 
-        foreach (var (tableName, dataRows) in records)
+        // Scrive l'header della tabella (colonne)
+        foreach (DataColumn column in rows.First().Table.Columns) csv.WriteField(column.ColumnName);
+        csv.NextRecord();
+
+        // Scrive i dati
+        foreach (var item in rows.SelectMany(row => row.ItemArray.Cast<DataRow>()))
         {
-            if (dataRows.Count == 0) continue; // Evita di scrivere tabelle vuote
-
-            // Scrive l'intestazione con il nome della tabella
-            writer.WriteLine($"Table: {tableName}");
-
-            // Scrive l'header della tabella (colonne)
-            var firstRow = dataRows.First();
-            foreach (DataColumn column in firstRow.Table.Columns)
-            {
-                csv.WriteField(column.ColumnName);
-            }
+            csv.WriteField(item);
             csv.NextRecord();
-
-            // Scrive i dati delle righe
-            foreach (DataRow row in dataRows)
-            {
-                foreach (var item in row.ItemArray)
-                {
-                    csv.WriteField(item);
-                }
-                csv.NextRecord();
-            }
         }
     }
-
 }

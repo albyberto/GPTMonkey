@@ -1,4 +1,4 @@
-﻿namespace Lapo.Enums;
+﻿namespace Lapo.Mud.Enums;
 
 public enum OrderByDirection
 {

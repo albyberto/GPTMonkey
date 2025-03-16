@@ -1,6 +1,6 @@
 using MudBlazor.Services;
 using Lapo.Mud.Components;
-using Lapo.Services;
+using Lapo.Mud.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 

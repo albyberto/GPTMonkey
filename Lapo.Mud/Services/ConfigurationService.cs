@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json.Linq;
 
-namespace Lapo.Services;
+namespace Lapo.Mud.Services;
 
 public class ConfigurationService
 {
