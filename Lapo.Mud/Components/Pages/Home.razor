@@ -14,6 +14,8 @@ else
 {
     @foreach (var tableName in _gridData.Keys)
     {
+        <MudText Typo="Typo.h2">@tableName</MudText>
+        
         <MudDataGrid Items="@_gridData[tableName]" T="IDictionary<string, object>" Filterable="true" Dense="true" Hover="true" Bordered="true">
             <Columns>
                 @foreach (var column in _columns[tableName])
@@ -41,9 +43,8 @@ else
     Dictionary<string, DataTable> _previousScan = [];
     Dictionary<string, List<DataRow>> _diff = [];
     
-    private Dictionary<string, List<Dictionary<string, object>>> _gridData = new(); // Nuovo per MudBlazor
-    private Dictionary<string, Dictionary<string, Type>> _columns = new(); // Colonne dinamiche
-
+    private Dictionary<string, List<Dictionary<string, object>>> _gridData = new(); // Grid data
+    private Dictionary<string, Dictionary<string, Type>> _columns = new(); // Dynamic columns
     protected override Task OnInitializedAsync() => ScanAsync();
 
     async Task ScanAsync()
@@ -71,6 +72,7 @@ else
             .SelectMany(x => x.Value)
             .OrderBy(x => x["Table"])
             .ThenBy(x => x["Id"])
+            .ThenBy(x => x["Operation"])
             .ToList();
         
         CsvService.Write(csv);
@@ -90,13 +92,22 @@ else
                 continue;
 
             var firstRow = dataRows[0];
-            var columns = firstRow.Table.Columns.Cast<DataColumn>().ToDictionary(col => col.ColumnName, col => col.DataType);
+            
+            var columns = firstRow.Table.Columns
+                .Cast<DataColumn>()
+                // .Where(col => col.ColumnName != "Table" && col.ColumnName != "Id") // ⬅️ Exclude columns Table and Id
+                .ToDictionary(col => col.ColumnName, col => col.DataType);
+            
             newColumns[table] = columns;
 
             var rows = dataRows.Select(row =>
                 columns.Keys.ToDictionary(colName => colName, colName => row[colName])).ToList();
 
-            newGridData[table] = rows;
+            newGridData[table] = rows
+                .OrderBy(x => x["Table"])
+                .ThenBy(x => x["Id"])
+                .ThenBy(x => x["Operation"])
+                .ToList();;
         }
 
         _gridData = newGridData;
@@ -127,15 +138,23 @@ else
             foreach (var row in added) row["Operation"] = "ADDED";
 
             var removed = previousRows.Where(row => !lastDict.ContainsKey(row["Id"])).ToList();
-            foreach (var row in removed) row["Operation"] = "DELETED";
+            foreach (var row in removed) row["Operation"] = "REMOVED";
 
-            var updated = lastRows.Where(row => previousDict.ContainsKey(row["Id"]) && !row.ItemArray.SequenceEqual(previousDict[row["Id"]].ItemArray)).ToList();
-            foreach (var row in updated) row["Operation"] = "UPDATED";
+            var updatedOld = previousRows
+                .Where(row => lastDict.ContainsKey(row["Id"]) && !row.ItemArray.SequenceEqual(lastDict[row["Id"]].ItemArray))
+                .ToList();
+            foreach (var row in updatedOld) row["Operation"] = "UPDATED_OLD";
+
+            var updatedNew = lastRows
+                .Where(row => previousDict.ContainsKey(row["Id"]) && !row.ItemArray.SequenceEqual(previousDict[row["Id"]].ItemArray))
+                .ToList();
+            foreach (var row in updatedNew) row["Operation"] = "UPDATED_NEW";
             
             var acc = new List<DataRow>();
             acc.AddRange(added);
             acc.AddRange(removed);
-            acc.AddRange(updated);
+            acc.AddRange(updatedOld);
+            acc.AddRange(updatedNew);
             foreach (var row in acc) row["Table"] = table;
             
             diff[table] = acc;

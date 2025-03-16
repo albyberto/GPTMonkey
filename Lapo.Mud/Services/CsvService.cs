@@ -25,15 +25,12 @@ public class CsvService
         using var writer = new StreamWriter(_path, append: true);
         using var csv = new CsvWriter(writer, new CsvConfiguration(CultureInfo.InvariantCulture));
 
-        // Scrive l'header della tabella (colonne)
+        // Write header
         foreach (DataColumn column in rows.First().Table.Columns) csv.WriteField(column.ColumnName);
         csv.NextRecord();
 
-        // Scrive i dati
-        foreach (var item in rows.SelectMany(row => row.ItemArray.Cast<DataRow>()))
-        {
-            csv.WriteField(item);
-            csv.NextRecord();
-        }
+        // Write rows
+        foreach (var item in rows.SelectMany(row => row.ItemArray)) csv.WriteField(item);
+        csv.NextRecord();
     }
 }
