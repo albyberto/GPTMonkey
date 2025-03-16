@@ -1,10 +1,35 @@
 ﻿@page "/"
 @using System.Data
+@using System.Linq.Expressions
 @using Lapo.Mud.Services
 
 <PageTitle>Home</PageTitle>
 
-<MudButton @onclick="ScanAsync">Scan</MudButton>
+<MudButton @onclick="ScanAsync" Variant="Variant.Outlined" ButtonType="ButtonType.Button" StartIcon="@Icons.Material.Outlined.Search" Color="Color.Primary">Scan</MudButton>
+@if (_diff.Count == 0)
+{
+    <MudText Typo="Typo.h6">No changes detected</MudText>
+}
+else
+{
+    @foreach (var tableName in _gridData.Keys)
+    {
+        <MudDataGrid Items="@_gridData[tableName]" T="IDictionary<string, object>" Filterable="true" Dense="true" Hover="true" Bordered="true">
+            <Columns>
+                @foreach (var column in _columns[tableName])
+                {
+                    <PropertyColumn Title="@column.Key"
+                                    Property="@(GetPropertyLambdaExpression<IDictionary<string, object>, object>(column.Key))">
+                    </PropertyColumn>
+                }
+            </Columns>
+            <PagerContent>
+                <MudDataGridPager T="IDictionary<string, object>" />
+            </PagerContent>
+        </MudDataGrid>
+    }
+    
+}
 
 @code
 {
@@ -12,10 +37,12 @@
     [Inject] CsvService CsvService { get; set; } = null!;
     [Inject] DatabaseService DatabaseService { get; set; } = null!;
 
-    readonly Dictionary<string, DataTable> _lastScan = new();
-    Dictionary<string, DataTable> _previousScan = new();
+    readonly Dictionary<string, DataTable> _lastScan = [];
+    Dictionary<string, DataTable> _previousScan = [];
+    Dictionary<string, List<DataRow>> _diff = [];
     
-    List<DataRow> _acc = [];
+    private Dictionary<string, List<Dictionary<string, object>>> _gridData = new(); // Nuovo per MudBlazor
+    private Dictionary<string, Dictionary<string, Type>> _columns = new(); // Colonne dinamiche
 
     protected override Task OnInitializedAsync() => ScanAsync();
 
@@ -33,35 +60,62 @@
         if (!_previousScan.Any())
         {
             _previousScan = new(_lastScan);
-            _acc = _lastScan.SelectMany(x => x.Value.AsEnumerable()).ToList();
             return;
         }
 
-        var diffResult = LoadDiff(_previousScan, _lastScan);
-        CsvService.Write(diffResult);
+        _diff.Clear();
+        _diff = LoadDiff(_previousScan, _lastScan);
+        BuildTable();
+        
+        var csv = _diff
+            .SelectMany(x => x.Value)
+            .OrderBy(x => x["Table"])
+            .ThenBy(x => x["Id"])
+            .ToList();
+        
+        CsvService.Write(csv);
 
         _previousScan = new(_lastScan);
-        _acc = _lastScan.SelectMany(x => x.Value.AsEnumerable()).ToList();
+    }
+    
+    void BuildTable()
+    {
+        var tables = _diff.Keys.ToList(); // Usa le tabelle presenti in _diff
+        var newGridData = new Dictionary<string, List<Dictionary<string, object>>>();
+        var newColumns = new Dictionary<string, Dictionary<string, Type>>();
+
+        foreach (var table in tables)
+        {
+            if (!_diff.TryGetValue(table, out var dataRows) || dataRows.Count == 0)
+                continue;
+
+            var firstRow = dataRows[0];
+            var columns = firstRow.Table.Columns.Cast<DataColumn>().ToDictionary(col => col.ColumnName, col => col.DataType);
+            newColumns[table] = columns;
+
+            var rows = dataRows.Select(row =>
+                columns.Keys.ToDictionary(colName => colName, colName => row[colName])).ToList();
+
+            newGridData[table] = rows;
+        }
+
+        _gridData = newGridData;
+        _columns = newColumns;
+        StateHasChanged();
     }
 
-    static List<DataRow> LoadDiff(Dictionary<string, DataTable> previousScan, Dictionary<string, DataTable> lastScan)
-    {
-        var acc = new List<DataRow>();
 
+    static Dictionary<string, List<DataRow>> LoadDiff(Dictionary<string, DataTable> previousScan, Dictionary<string, DataTable> lastScan)
+    {
+        var diff = new Dictionary<string, List<DataRow>>();
+        
         foreach (var table in lastScan.Keys)
         {
             if (!previousScan.TryGetValue(table, out var previous)) continue;
-
-            previous.Columns.Add("Table", typeof(string));
-            previous.Columns["Table"]?.SetOrdinal(0);
-            previous.Columns.Add("Operation", typeof(string));
-            previous.Columns["Operation"]?.SetOrdinal(1);
+            EnhanceDataTable(previous);
 
             var last = lastScan[table];
-            last.Columns.Add("Table", typeof(string));
-            last.Columns["Table"]?.SetOrdinal(0);
-            last.Columns.Add("Operation", typeof(string));
-            last.Columns["Operation"]?.SetOrdinal(0);
+            EnhanceDataTable(last);
 
             var previousRows = previous.AsEnumerable().ToList();
             var lastRows = last.AsEnumerable().ToList();
@@ -78,11 +132,42 @@
             var updated = lastRows.Where(row => previousDict.ContainsKey(row["Id"]) && !row.ItemArray.SequenceEqual(previousDict[row["Id"]].ItemArray)).ToList();
             foreach (var row in updated) row["Operation"] = "UPDATED";
             
+            var acc = new List<DataRow>();
             acc.AddRange(added);
             acc.AddRange(removed);
             acc.AddRange(updated);
+            foreach (var row in acc) row["Table"] = table;
+            
+            diff[table] = acc;
         }
 
-        return acc.OrderBy(x => x["Table"]).ThenBy(x => x["Id"]).ToList();
+        return diff;
+    }
+
+    static void EnhanceDataTable(DataTable previous)
+    {
+        const string table = "Table";
+        if (!previous.Columns.Contains(table))
+        {
+            previous.Columns.Add(table, typeof(string));
+            previous.Columns[table]?.SetOrdinal(0);                
+        }
+
+        const string operation = "Operation";
+        if (previous.Columns.Contains(operation)) return;
+        
+        previous.Columns.Add(operation, typeof(string));
+        previous.Columns[operation]?.SetOrdinal(1);
+    }
+    
+    static Expression<Func<T, TP>> GetPropertyLambdaExpression<T, TP>(string propertyName)
+    {
+        var param = Expression.Parameter(typeof(T), "x");
+        var keyProperty = typeof(T).GetProperty("Item");
+        var indexArgument = Expression.Constant(propertyName);
+        var propertyAccess = Expression.MakeIndex(param, keyProperty, [indexArgument]);
+        var lambdaExpression = Expression.Lambda<Func<T, TP>>(propertyAccess, param);
+
+        return lambdaExpression;
     }
 }
