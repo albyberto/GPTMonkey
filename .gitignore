@@ -6,6 +6,8 @@
 # SonarQube
 .sonarqube
 
+report.csv
+
 # dotenv files
 .env
 
