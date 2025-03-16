@@ -8,7 +8,7 @@
 
 <MudText Typo="Typo.h3" GutterBottom="true">Configuration</MudText>
 
-<MudButton OnClick="OpenAddItemDialog" Color="Color.Success" Class="mb-2">Add Item</MudButton>
+<MudButton OnClick="OpenAddItemDialog" StartIcon="@Icons.Material.Outlined.Add" Color="Color.Success" Class="mb-2">Add Item</MudButton>
 
 <MudDataGrid Items="@_items" Dense="true" Hover="true" MultiSelection="false">
     <Columns>
@@ -18,7 +18,7 @@
         <PropertyColumn Property="x => x.Direction" Title="Direction" />
         <TemplateColumn>
             <CellTemplate Context="context">
-                <MudButton OnClick="@(() => RemoveItem(context.Item))" Color="Color.Error" Variant="Variant.Text">Remove</MudButton>
+                <MudButton OnClick="@(() => RemoveItem(context.Item))" StartIcon="@Icons.Material.Outlined.Delete" Color="Color.Error" Variant="Variant.Text">Remove</MudButton>
             </CellTemplate>
         </TemplateColumn>
     </Columns>

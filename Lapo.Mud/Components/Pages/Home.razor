@@ -6,7 +6,7 @@
 
 <PageTitle>Home</PageTitle>
 
-<MudButton @onclick="ScanAsync" Variant="Variant.Outlined" ButtonType="ButtonType.Button" StartIcon="@Icons.Material.Outlined.Search" Color="Color.Primary">Scan</MudButton>
+<MudButton @onclick="ScanAsync" Class="w-100" Variant="Variant.Outlined" ButtonType="ButtonType.Button" StartIcon="@Icons.Material.Outlined.Search" Color="Color.Primary">Scan</MudButton>
 @if (_diff.Count == 0)
 {
     <MudText Typo="Typo.h6">No changes detected</MudText>
@@ -15,7 +15,7 @@ else
 {
     @foreach (var tableName in _gridData.Keys)
     {
-        <MudText Typo="Typo.h2">@tableName</MudText>
+        <MudText Typo="Typo.h4" Class="mt-5">@tableName</MudText>
         
         <MudDataGrid Items="@_gridData[tableName]" T="IDictionary<string, object>" Filterable="true" Dense="true" Hover="true" Bordered="true">
             <Columns>
