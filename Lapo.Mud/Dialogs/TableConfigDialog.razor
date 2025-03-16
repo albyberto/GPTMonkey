@@ -1,0 +1,33 @@
+﻿@using Lapo.Mud.Components.Pages
+@using Lapo.Mud.Enums
+@using MudBlazor
+
+<MudDialog Title="Add Table Configuration">
+    <DialogContent>
+        <MudForm @ref="_form" OnValidSubmit="Submit">
+            <MudTextField @bind-Value="Config.Table" Label="Table" Variant="Variant.Outlined" Required="true" />
+            <MudTextField @bind-Value="Config.Where" Label="Where" Variant="Variant.Outlined" />
+            <MudNumericField @bind-Value="Config.Top" Label="Top" Variant="Variant.Outlined" Required="true" />
+            <MudSelect T="OrderByDirection" @bind-Value="Config.Direction" Label="Direction" Variant="Variant.Outlined" Required="true">
+                <MudSelectItem Value="OrderByDirection.Asc">Asc</MudSelectItem>
+                <MudSelectItem Value="OrderByDirection.Desc">Desc</MudSelectItem>
+            </MudSelect>
+            <MudButton OnClick="Submit" Color="Color.Success" Variant="Variant.Filled">Add</MudButton>
+            <MudButton OnClick="Cancel" Color="Color.Default" Variant="Variant.Text">Cancel</MudButton>
+        </MudForm>
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; }
+    [Parameter] public required Configuration.TableConfig Config { get; set; }
+    MudForm _form = null!;
+
+    private async Task Submit()
+    {
+        await _form.Validate();
+        if (_form.IsValid) MudDialog.Close(DialogResult.Ok(Config));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

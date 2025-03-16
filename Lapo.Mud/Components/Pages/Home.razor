@@ -1,4 +1,4 @@
-﻿@page "/"
+﻿@page "/config"
 @using System.Data
 @using System.Linq.Expressions
 @using Lapo.Mud.Comparers
@@ -52,11 +52,11 @@ else
     {
         _lastScan.Clear();
 
-        var tables = await ConfigurationService.ReadAsync<List<string>>("Tables") ?? [];
-        foreach (var table in tables)
+        var configs = await ConfigurationService.ReadAsync<List<Configuration.TableConfig>>("Tables") ?? [];
+        foreach (var config in configs)
         {
-            var rows = await DatabaseService.QueryAsync(table);
-            _lastScan.Add(table, rows);
+            var rows = await DatabaseService.QueryAsync(config.Table, config.Where, config.Top, config.Direction);
+            _lastScan.Add(config.Table, rows);
         }
 
         if (!_previousScan.Any())

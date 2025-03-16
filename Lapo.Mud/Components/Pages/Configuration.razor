@@ -1,64 +1,66 @@
-﻿@page "/config"
+﻿@page "/"
+@using Lapo.Mud.Dialogs
+@using Lapo.Mud.Enums
 @using Lapo.Mud.Services
+@using MudBlazor
 
 <PageTitle>Configuration</PageTitle>
 
 <MudText Typo="Typo.h3" GutterBottom="true">Configuration</MudText>
 
-<MudPaper Class="d-flex align-items-center mb-4" Elevation="0">
-    <MudTextField 
-        @bind-Value="_newItem" 
-        Label="New Item" 
-        Variant="Variant.Outlined" 
-        Required="true" 
-        Class="flex-grow-1" />
-    <MudButton 
-        OnClick="AddItem" 
-        Class="ms-2" 
-        Color="Color.Primary" 
-        Variant="Variant.Outlined" 
-        IconClass="@Icons.Material.Outlined.Add">Add</MudButton>
-</MudPaper>
+<MudButton OnClick="OpenAddItemDialog" Color="Color.Success" Class="mb-2">Add Item</MudButton>
 
-<MudList T="string">
-    @foreach (var item in _items)
+<MudDataGrid Items="@_items" Dense="true" Hover="true" MultiSelection="false">
+    <Columns>
+        <PropertyColumn Property="x => x.Table" Title="Table" />
+        <PropertyColumn Property="x => x.Where" Title="Where" />
+        <PropertyColumn Property="x => x.Top" Title="Top" />
+        <PropertyColumn Property="x => x.Direction" Title="Direction" />
+        <TemplateColumn>
+            <CellTemplate Context="context">
+                <MudButton OnClick="@(() => RemoveItem(context.Item))" Color="Color.Error" Variant="Variant.Text">Remove</MudButton>
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+@code {
+    public class TableConfig
     {
-        <MudListItem>
-            <div class="d-flex justify-content-between w-100 align-items-center">
-                <MudButton OnClick="@(() => RemoveItem(item))" Color="Color.Error" Variant="Variant.Text" Class="me-4">Delete</MudButton>
-                <MudText>@item</MudText>
-            </div>
-        </MudListItem>
+        public string Table { get; set; } = string.Empty;
+        public string Where { get; set; } = string.Empty;
+        public int Top { get; set; } = 10;
+        public OrderByDirection Direction { get; set; } = OrderByDirection.Desc;
     }
-</MudList>
-
-@code{
 
     [Inject] ConfigurationService ConfigurationService { get; set; } = null!;
+    [Inject] IDialogService DialogService { get; set; } = null!;
 
-    List<string> _items = [];
-    string _newItem = string.Empty;
+    List<TableConfig> _items = new();
 
     protected override async Task OnInitializedAsync()
     {
-        _items = await ConfigurationService.ReadAsync<List<string>>("Tables") ?? [];
+        _items = await ConfigurationService.ReadAsync<List<TableConfig>>("Tables") ?? new();
     }
 
-    async Task AddItem()
+    async Task OpenAddItemDialog()
     {
-        if (string.IsNullOrWhiteSpace(_newItem)) return;
-        
-        _items.Add(_newItem);
+        var parameters = new DialogParameters { ["Config"] = new TableConfig() };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
 
-        await ConfigurationService.UpsertAsync("Tables", _items);
-        
-        _newItem = string.Empty;
+        var dialog = await DialogService.ShowAsync<TableConfigDialog>("Add Table Config", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false, Data: TableConfig newItem })
+        {
+            _items.Add(newItem);
+            await ConfigurationService.UpsertAsync("Tables", _items);
+        }
     }
 
-    async Task RemoveItem(string item)
+    async Task RemoveItem(TableConfig item)
     {
         _items.Remove(item);
         await ConfigurationService.UpsertAsync("Tables", _items);
     }
-
 }

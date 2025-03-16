@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Lapo.Mud.Components.Pages;
+using Newtonsoft.Json.Linq;
 
 namespace Lapo.Mud.Services;
 
@@ -18,32 +19,59 @@ public class ConfigurationService
 
     public async Task<T?> ReadAsync<T>(string key)
     {
-        var json = await File.ReadAllTextAsync(_path);
-        var jsonObj = JObject.Parse(json);
-        var sectionPath = _section.Split(':');
-        var keyPath = key.Split(':');
-
-        JToken targetSection = jsonObj;
-
-        foreach (var section in sectionPath)
+        try
         {
-            if (targetSection[section] is not JObject obj) return default;
-            targetSection = obj;
-        }
+            var json = await File.ReadAllTextAsync(_path);
+            var jsonObj = JObject.Parse(json);
+            var sectionPath = _section.Split(':');
+            var keyPath = key.Split(':');
 
-        foreach (var part in keyPath[..^1])
+            JToken targetSection = jsonObj;
+
+            // Naviga fino alla sezione specificata in _section
+            foreach (var section in sectionPath)
+            {
+                if (targetSection[section] is not JObject obj)
+                {
+                    Console.WriteLine($"Section '{section}' not found in JSON.");
+                    return default;
+                }
+                targetSection = obj;
+            }
+
+            // Naviga fino alla chiave specificata in key
+            foreach (var part in keyPath[..^1])
+            {
+                if (targetSection[part] is not JObject obj)
+                {
+                    Console.WriteLine($"Key part '{part}' not found in JSON.");
+                    return default;
+                }
+                targetSection = obj;
+            }
+
+            var token = targetSection[keyPath[^1]];
+
+            if (token is null)
+            {
+                Console.WriteLine($"Key '{key}' not found in JSON.");
+                return default;
+            }
+
+            // Se il tipo richiesto è una lista, assicuriamoci che il token sia un array
+            if (typeof(T) != typeof(List<Configuration.TableConfig>) || token is JArray) return token.ToObject<T>(new());
+            
+            Console.WriteLine($"Expected JArray but found a different structure for key '{key}'.");
+            return default;
+
+        }
+        catch (Exception ex)
         {
-            if (targetSection[part] is not JObject obj) return default;
-            targetSection = obj;
+            Console.WriteLine($"Error reading JSON key '{key}': {ex.Message}");
+            return default;
         }
-
-        var token = targetSection[keyPath[^1]];
-        
-        return token is null 
-            ? default 
-            : token.ToObject<T?>(); // Usa T? per trattare correttamente il tipo nullable
     }
-    
+
     public async Task UpsertAsync<T>(string key, T value)
     {
         var json = await File.ReadAllTextAsync(_path);
