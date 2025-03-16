@@ -12,111 +12,71 @@
     [Inject] CsvService CsvService { get; set; } = null!;
     [Inject] DatabaseService DatabaseService { get; set; } = null!;
 
-    readonly Dictionary<string, DataTable> _scan = new();
-    Dictionary<string, DataTable> _prevScan = new();
+    readonly Dictionary<string, DataTable> _lastScan = new();
+    Dictionary<string, DataTable> _previousScan = new();
 
     protected override Task OnInitializedAsync() => ScanAsync();
 
     async Task ScanAsync()
     {
-        _scan.Clear();
+        _lastScan.Clear();
 
         var tables = await ConfigurationService.ReadAsync<List<string>>("Tables") ?? [];
         foreach (var table in tables)
         {
             var rows = await DatabaseService.QueryAsync(table);
-            _scan.Add(table, rows);
+            _lastScan.Add(table, rows);
         }
 
-        if (!_prevScan.Any())
+        if (!_previousScan.Any())
         {
-            _prevScan = new(_scan);
+            _previousScan = new(_lastScan);
             return;
         }
 
-        var diffResult = LoadDiff();
-        var mergedData = Merge(diffResult);
+        var diffResult = LoadDiff(_previousScan, _lastScan);
+        CsvService.Write(diffResult);
 
-        CsvService.Write(mergedData);
-
-         _prevScan = new(_scan);
+        _previousScan = new(_lastScan);
     }
 
-(Dictionary<string, List<dynamic>> Added, Dictionary<string, List<dynamic>> Removed, Dictionary<string, List<dynamic>> Updated) LoadDiff()
-{
-    var addedRows = new Dictionary<string, List<DataTable>>();
-    var removedRows = new Dictionary<string, List<DataTable>>();
-    var updatedRows = new Dictionary<string, List<DataTable>>();
-
-    foreach (var table in _prevScan.Keys)
+    static Dictionary<string, List<DataRow>> LoadDiff(Dictionary<string, DataTable> previousScan, Dictionary<string, DataTable> lastScan)
     {
-        if (!_scan.ContainsKey(table)) continue;
+        var diff = new Dictionary<string, List<DataRow>>();
 
-        var prevRows = _prevScan[table];
-        var currentRows = _scan[table];
-
-        var prevDict = prevRows.ToDictionary(row => row.Id);
-        var currentDict = currentRows.ToDictionary(row => row.Id);
-
-        // Righe aggiunte
-        var added = currentRows.Where(row => !prevDict.ContainsKey(row.Id)).ToList();
-        foreach (var row in added) AddOperation(row, table, "ADDED");
-        
-        if (added.Any()) addedRows[table] = added;
-
-        // Righe rimosse
-        var removed = prevRows.Where(row => !currentDict.ContainsKey(row.Id)).ToList();
-        foreach (var row in removed) AddOperation(row, table, "DELETED");
-        
-        if (removed.Any()) removedRows[table] = removed;
-
-        // Righe modificate
-        var updated = new List<dynamic>();
-
-        foreach (var row in currentRows)
+        foreach (var table in lastScan.Keys)
         {
-            if (!prevDict.TryGetValue(row.Id, out dynamic oldRow)) continue;
+            diff[table] = [];
 
-            var oldRowDict = (IDictionary<string, object>)oldRow;
-            var newRowDict = (IDictionary<string, object>)row;
+            if (!previousScan.TryGetValue(table, out var previous)) continue;
 
-            var isDifferent = oldRowDict.Keys.Any(key => !newRowDict.ContainsKey(key) || !Equals(oldRowDict[key], newRowDict[key]));
+            previous.Columns.Add("Operation", typeof(string));
+            previous.Columns["Operation"]?.SetOrdinal(0);
 
-            if (!isDifferent) continue;
+            var last = lastScan[table];
+            last.Columns.Add("Operation", typeof(string));
+            last.Columns["Operation"]?.SetOrdinal(0);
+
+            var previousRows = previous.AsEnumerable().ToList();
+            var lastRows = last.AsEnumerable().ToList();
+
+            var previousDict = previousRows.ToDictionary(row => row["Id"]);
+            var lastDict = lastRows.ToDictionary(row => row["Id"]);
+
+            var added = lastRows.Where(row => !previousDict.ContainsKey(row["Id"])).ToList();
+            foreach (var row in added) row["Operation"] = "ADDED";
+
+            var removed = previousRows.Where(row => !lastDict.ContainsKey(row["Id"])).ToList();
+            foreach (var row in removed) row["Operation"] = "DELETED";
+
+            var updated = lastRows.Where(row => previousDict.ContainsKey(row["Id"]) && !row.ItemArray.SequenceEqual(previousDict[row["Id"]].ItemArray)).ToList();
+            foreach (var row in updated) row["Operation"] = "UPDATED";
             
-            AddOperation(oldRow, table, "UPDATED OLD");
-            AddOperation(row, table, "UPDATED NEW");
-
-            updated.Add(oldRow);
-            updated.Add(row);
+            diff[table].AddRange(added);
+            diff[table].AddRange(removed);
+            diff[table].AddRange(updated);
         }
 
-        if (updated.Any()) updatedRows[table] = updated;
-    }
-
-    return (addedRows, removedRows, updatedRows);
-}
-
-    static List<dynamic> Merge((Dictionary<string, List<dynamic>> Added, Dictionary<string, List<dynamic>> Removed, Dictionary<string, List<dynamic>> Updated) elements)
-    {
-        var mergedList = new List<dynamic>();
-
-        foreach (var table in elements.Added.Keys) mergedList.AddRange(elements.Added[table]);
-
-        foreach (var table in elements.Removed.Keys) mergedList.AddRange(elements.Removed[table]);
-
-        foreach (var table in elements.Updated.Keys) mergedList.AddRange(elements.Updated[table]);
-
-        return mergedList
-            .OrderBy(row => row.TableName)
-            .ThenBy(row => row.Id)
-            .ToList();
-    }
-
-    static void AddOperation(dynamic row, string tableName, string operation)
-    {
-        var expando = (IDictionary<string, object>)row;
-        expando["TableName"] = tableName;
-        expando["Operation"] = operation;
+        return diff;
     }
 }

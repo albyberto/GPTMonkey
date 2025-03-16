@@ -37,6 +37,7 @@ public class DatabaseService(IConfiguration configuration)
         dataTable.Load(reader);
         
         dataTable.Columns.Add("Id", typeof(int));
+        dataTable.Columns["Id"]?.SetOrdinal(0);
         foreach (DataRow row in dataTable.Rows) row["Id"] = row[primaryKey];
 
         return dataTable;

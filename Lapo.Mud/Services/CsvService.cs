@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.Data;
+using System.Globalization;
 using CsvHelper;
 using CsvHelper.Configuration;
 
@@ -17,25 +18,38 @@ public class CsvService
         _path = path;
     }
 
-    public void Write(List<dynamic> records)
+    public void Write(Dictionary<string, List<DataRow>> records)
     {
         if (records.Count == 0) return;
 
-        var fileExists = File.Exists(_path);
         using var writer = new StreamWriter(_path, append: true);
         using var csv = new CsvWriter(writer, new CsvConfiguration(CultureInfo.InvariantCulture));
 
-        if (!fileExists)
+        foreach (var (tableName, dataRows) in records)
         {
-            var firstRecord = (IDictionary<string, object>)records[0];
-            foreach (var header in firstRecord.Keys) csv.WriteField(header);
-            csv.NextRecord();
-        }
+            if (dataRows.Count == 0) continue; // Evita di scrivere tabelle vuote
 
-        foreach (var recordDict in records.Select(record => (IDictionary<string, object>)record))
-        {
-            foreach (var value in recordDict.Values) csv.WriteField(value);
+            // Scrive l'intestazione con il nome della tabella
+            writer.WriteLine($"Table: {tableName}");
+
+            // Scrive l'header della tabella (colonne)
+            var firstRow = dataRows.First();
+            foreach (DataColumn column in firstRow.Table.Columns)
+            {
+                csv.WriteField(column.ColumnName);
+            }
             csv.NextRecord();
+
+            // Scrive i dati delle righe
+            foreach (DataRow row in dataRows)
+            {
+                foreach (var item in row.ItemArray)
+                {
+                    csv.WriteField(item);
+                }
+                csv.NextRecord();
+            }
         }
     }
+
 }
