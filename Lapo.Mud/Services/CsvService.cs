@@ -18,19 +18,23 @@ public class CsvService
         _path = path;
     }
 
-    public void Write(List<DataRow> rows)
+    public void Write(List<DataRow> data)
     {
-        if (rows.Count == 0) return;
+        if (data.Count == 0) return;
 
         using var writer = new StreamWriter(_path, append: true);
         using var csv = new CsvWriter(writer, new CsvConfiguration(CultureInfo.InvariantCulture));
 
         // Write header
-        foreach (DataColumn column in rows.First().Table.Columns) csv.WriteField(column.ColumnName);
+        foreach (DataColumn column in data.First().Table.Columns) csv.WriteField(column.ColumnName);
         csv.NextRecord();
 
         // Write rows
-        foreach (var item in rows.SelectMany(row => row.ItemArray)) csv.WriteField(item);
-        csv.NextRecord();
+        var rows = data.Select(row => row.ItemArray);
+        foreach (var row in rows)
+        {
+            foreach (var item in row) csv.WriteField(item);
+            csv.NextRecord();
+        } 
     }
 }
