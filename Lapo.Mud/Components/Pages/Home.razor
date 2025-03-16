@@ -67,14 +67,9 @@ else
 
         _diff.Clear();
         _diff = LoadDiff(_previousScan, _lastScan);
+        
         BuildTable(_diff);
-        
-        var csv = _diff
-            .OrderBy(x => x.Key)
-            .SelectMany(x => x.Value)
-            .ToList();
-        
-        CsvService.Write(csv);
+        CsvService.Write(_diff);
 
         _previousScan = new(_lastScan);
     }
