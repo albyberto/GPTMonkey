@@ -10,7 +10,7 @@ public class DatabaseService(IConfiguration configuration)
 {
     readonly string _connectionString = configuration.GetConnectionString("DefaultConnection") ?? throw new ArgumentNullException(nameof(configuration), "Connection string not found.");
 
-    public async Task<DataTable> QueryAsync(string table, string? where = null, int? top = null, OrderByDirection direction = OrderByDirection.Desc)
+    public async Task<DataTable> QueryAsync(string table, string primaryKeyColumn, string? where = null, int? top = null, OrderByDirection direction = OrderByDirection.Desc)
     {
         if (string.IsNullOrWhiteSpace(table))
             throw new ArgumentException("Table name cannot be null or empty.", nameof(table));
@@ -36,9 +36,9 @@ public class DatabaseService(IConfiguration configuration)
         var dataTable = new DataTable();
         dataTable.Load(reader);
         
-        dataTable.Columns.Add("Id", typeof(int));
-        dataTable.Columns["Id"]?.SetOrdinal(0);
-        foreach (DataRow row in dataTable.Rows) row["Id"] = row[primaryKey];
+        dataTable.Columns.Add(primaryKeyColumn, typeof(int));
+        dataTable.Columns[primaryKeyColumn]?.SetOrdinal(0);
+        foreach (DataRow row in dataTable.Rows) row[primaryKeyColumn] = row[primaryKey];
 
         return dataTable;
     }
