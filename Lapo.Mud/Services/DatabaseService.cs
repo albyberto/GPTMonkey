@@ -52,10 +52,10 @@ public class DatabaseService(IConfiguration configuration)
             .Append("SELECT")
             .Append(' ');
 
-        if (top.HasValue)
-            queryBuilder
-                .Append($"TOP ({top.Value})")
-                .Append(' ');
+        // if (top.HasValue)
+        //     queryBuilder
+        //         .Append($"TOP ({top.Value})")
+        //         .Append(' ');
 
         queryBuilder
             .Append('*')
@@ -72,12 +72,12 @@ public class DatabaseService(IConfiguration configuration)
                 .Append(where)
                 .Append(' ');
 
-        queryBuilder
-            .Append("ORDER BY")
-            .Append(' ')
-            .Append(primary)
-            .Append(' ')
-            .Append(direction == OrderByDirection.Asc ? "ASC" : "DESC");
+        // queryBuilder
+        //     .Append("ORDER BY")
+        //     .Append(' ')
+        //     .Append(primary)
+        //     .Append(' ')
+        //     .Append(direction == OrderByDirection.Asc ? "ASC" : "DESC");
 
         return queryBuilder.ToString();
     }

@@ -141,22 +141,30 @@ else
             var previousDict = previousRows.ToDictionary(row => row["Id"]);
             var lastDict = lastRows.ToDictionary(row => row["Id"]);
 
-            var added = lastRows.Where(row => !previousDict.ContainsKey(row["Id"])).ToList();
+            var added = lastRows
+                .Where(row => !previousDict.ContainsKey(row["Id"]))
+                .ToList();
+            
             foreach (var row in added) row["Operation"] = "ADDED";
 
-            var removed = previousRows.Where(row => !lastDict.ContainsKey(row["Id"])).ToList();
+            var removed = previousRows
+                .Where(row => !lastDict.ContainsKey(row["Id"]))
+                .ToList();
+            
             foreach (var row in removed) row["Operation"] = "REMOVED";
 
             var updatedOld = previousRows
-                .Where(row => lastDict.ContainsKey(row["Id"]) && !row.ItemArray.SequenceEqual(lastDict[row["Id"]].ItemArray))
+                .Where(row => lastDict.ContainsKey(row["Id"]) && !string.Equals(string.Join("|", row.ItemArray.Select(x => x?.ToString())), string.Join("|", lastDict[row["Id"]].ItemArray.Select(x => x?.ToString()))))
                 .ToList();
+
             foreach (var row in updatedOld) row["Operation"] = "UPDATED_OLD";
 
             var updatedNew = lastRows
-                .Where(row => previousDict.ContainsKey(row["Id"]) && !row.ItemArray.SequenceEqual(previousDict[row["Id"]].ItemArray))
+                .Where(row => previousDict.ContainsKey(row["Id"]) && !string.Equals(string.Join("|", row.ItemArray.Select(x => x?.ToString())), string.Join("|", previousDict[row["Id"]].ItemArray.Select(x => x?.ToString()))))
                 .ToList();
-            foreach (var row in updatedNew) row["Operation"] = "UPDATED_NEW";
 
+            foreach (var row in updatedNew) row["Operation"] = "UPDATED_NEW";
+            
             var acc = new List<DataRow>();
             acc.AddRange(added);
             acc.AddRange(removed);

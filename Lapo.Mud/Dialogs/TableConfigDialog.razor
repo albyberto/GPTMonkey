@@ -7,12 +7,12 @@
         <MudForm @ref="_form" OnValidSubmit="Submit">
             <MudTextField @bind-Value="Config.Table" Label="Table" Variant="Variant.Outlined" Required="true" />
             <MudTextField @bind-Value="Config.Where" Label="Where" Variant="Variant.Outlined" />
-            <MudNumericField @bind-Value="Config.Top" Label="Top" Variant="Variant.Outlined" Required="true" />
-            <MudSelect T="OrderByDirection" @bind-Value="Config.Direction" Label="Direction" Variant="Variant.Outlined" Required="true">
-                <MudSelectItem Value="OrderByDirection.Asc">Asc</MudSelectItem>
-                <MudSelectItem Value="OrderByDirection.Desc">Desc</MudSelectItem>
-            </MudSelect>
-            <MudButton OnClick="Submit" Color="Color.Success" Variant="Variant.Filled">Add</MudButton>
+            @* <MudNumericField @bind-Value="Config.Top" Label="Top" Variant="Variant.Outlined" Required="true" /> *@
+            @* <MudSelect T="OrderByDirection" @bind-Value="Config.Direction" Label="Direction" Variant="Variant.Outlined" Required="true"> *@
+            @*     <MudSelectItem Value="OrderByDirection.Asc">Asc</MudSelectItem> *@
+            @*     <MudSelectItem Value="OrderByDirection.Desc">Desc</MudSelectItem> *@
+            @* </MudSelect> *@
+            <MudButton OnClick="Submit" Color="Color.Primary" Variant="Variant.Outlined">Add</MudButton>
             <MudButton OnClick="Cancel" Color="Color.Default" Variant="Variant.Text">Cancel</MudButton>
         </MudForm>
     </DialogContent>
