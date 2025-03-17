@@ -10,14 +10,14 @@
 
 @if (_progress)
 {
-    <MudButton Disabled="true" Class="w-100" Variant="Variant.Outlined" ButtonType="ButtonType.Button"StartIcon="@Icons.Material.Outlined.Search" Color="Color.Primary">
+    <MudButton Disabled="true" FullWidth="true" Variant="Variant.Outlined" ButtonType="ButtonType.Button"StartIcon="@Icons.Material.Outlined.Search" Color="Color.Primary">
         <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" />
         <MudText Class="ml-2">Processing</MudText>
     </MudButton>
 }
 else
 {
-    <MudButton @onclick="ScanAsync" Class="w-100" Variant="Variant.Outlined" ButtonType="ButtonType.Button" StartIcon="@Icons.Material.Outlined.Search" Color="Color.Primary">
+    <MudButton @onclick="ScanAsync" FullWidth="true" Variant="Variant.Outlined" ButtonType="ButtonType.Button" StartIcon="@Icons.Material.Outlined.Search" Color="Color.Primary">
         Scan
     </MudButton>
 
