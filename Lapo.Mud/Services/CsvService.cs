@@ -11,9 +11,10 @@ public class CsvService
 
     public CsvService(string path)
     {
-        path = $"{path}.csv";
+        var baseDirectory = AppContext.BaseDirectory;
+        path = Path.Combine(baseDirectory, $"{path}.csv");
 
-        if (!File.Exists(path)) File.Create(path);
+        if (!File.Exists(path)) File.Create(path).Dispose();
 
         _path = path;
     }

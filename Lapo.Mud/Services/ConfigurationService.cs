@@ -10,7 +10,8 @@ public class ConfigurationService
 
     public ConfigurationService(string path, string section)
     {
-        path = $"{path}.json";
+        var baseDirectory = AppContext.BaseDirectory;
+        path = Path.Combine(baseDirectory, $"{path}.json");
         if (!File.Exists(path)) throw new FileNotFoundException("Configuration file not found.", path);
 
         _path = path;
@@ -60,7 +61,7 @@ public class ConfigurationService
 
             // Se il tipo richiesto è una lista, assicuriamoci che il token sia un array
             if (typeof(T) != typeof(List<Configuration.TableConfig>) || token is JArray) return token.ToObject<T>(new());
-            
+
             Console.WriteLine($"Expected JArray but found a different structure for key '{key}'.");
             return default;
 

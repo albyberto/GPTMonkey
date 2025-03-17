@@ -2,11 +2,14 @@
 @using System.Data
 @using System.Linq.Expressions
 @using Lapo.Mud.Comparers
+@using Lapo.Mud.Dialogs
 @using Lapo.Mud.Services
 
 <PageTitle>Home</PageTitle>
 
-<MudButton @onclick="ScanAsync" Class="w-100" Variant="Variant.Outlined" ButtonType="ButtonType.Button" StartIcon="@Icons.Material.Outlined.Search" Color="Color.Primary">Scan</MudButton>
+<MudButton @onclick="ScanAsync" Class="w-100" Variant="Variant.Outlined" ButtonType="ButtonType.Button"
+           StartIcon="@Icons.Material.Outlined.Search" Color="Color.Primary">Scan
+</MudButton>
 @if (_diff.Count == 0)
 {
     <MudText Typo="Typo.h6">No changes detected</MudText>
@@ -16,8 +19,9 @@ else
     @foreach (var tableName in _gridData.Keys)
     {
         <MudText Typo="Typo.h4" Class="mt-5">@tableName</MudText>
-        
-        <MudDataGrid Items="@_gridData[tableName]" T="IDictionary<string, object>" Filterable="true" Dense="true" Hover="true" Bordered="true">
+
+        <MudDataGrid Items="@_gridData[tableName]" T="IDictionary<string, object>" Filterable="true" Dense="true"
+                     Hover="true" Bordered="true">
             <Columns>
                 @foreach (var column in _columns[tableName])
                 {
@@ -27,11 +31,10 @@ else
                 }
             </Columns>
             <PagerContent>
-                <MudDataGridPager T="IDictionary<string, object>" />
+                <MudDataGridPager T="IDictionary<string, object>"/>
             </PagerContent>
         </MudDataGrid>
     }
-    
 }
 
 @code
@@ -39,41 +42,53 @@ else
     [Inject] ConfigurationService ConfigurationService { get; set; } = null!;
     [Inject] CsvService CsvService { get; set; } = null!;
     [Inject] DatabaseService DatabaseService { get; set; } = null!;
+    [Inject] IDialogService DialogService { get; set; } = null!;
 
     readonly Dictionary<string, DataTable> _lastScan = [];
     Dictionary<string, DataTable> _previousScan = [];
     Dictionary<string, List<DataRow>> _diff = [];
-    
+
     private Dictionary<string, List<Dictionary<string, object>>> _gridData = new(); // Grid data
     private Dictionary<string, Dictionary<string, Type>> _columns = new(); // Dynamic columns
     protected override Task OnInitializedAsync() => ScanAsync();
 
     async Task ScanAsync()
     {
-        _lastScan.Clear();
+        var parameters = new DialogParameters();
+        var options = new DialogOptions { CloseButton = false, FullScreen = true, NoHeader = true };
+        var dialog = await DialogService.ShowAsync<ProgressDialog>("Scanning", parameters, options);
 
-        var configs = await ConfigurationService.ReadAsync<List<Configuration.TableConfig>>("Tables") ?? [];
-        foreach (var config in configs)
+        try
         {
-            var rows = await DatabaseService.QueryAsync(config.Table, config.Where, config.Top, config.Direction);
-            _lastScan.Add(config.Table, rows);
-        }
+            _lastScan.Clear();
 
-        if (!_previousScan.Any())
-        {
+            var configs = await ConfigurationService.ReadAsync<List<Configuration.TableConfig>>("Tables") ?? [];
+            foreach (var config in configs)
+            {
+                var rows = await DatabaseService.QueryAsync(config.Table, config.Where, config.Top, config.Direction);
+                _lastScan.Add(config.Table, rows);
+            }
+
+            if (!_previousScan.Any())
+            {
+                _previousScan = new(_lastScan);
+                return;
+            }
+
+            _diff.Clear();
+            _diff = LoadDiff(_previousScan, _lastScan);
+
+            BuildTable(_diff);
+            CsvService.Write(_diff);
+
             _previousScan = new(_lastScan);
-            return;
         }
-
-        _diff.Clear();
-        _diff = LoadDiff(_previousScan, _lastScan);
-        
-        BuildTable(_diff);
-        CsvService.Write(_diff);
-
-        _previousScan = new(_lastScan);
+        finally
+        {
+            dialog.Close();
+        }
     }
-    
+
     void BuildTable(Dictionary<string, List<DataRow>> diff)
     {
         var tables = diff.Keys.ToList(); // Usa le tabelle presenti in _diff
@@ -86,12 +101,12 @@ else
                 continue;
 
             var firstRow = dataRows[0];
-            
+
             var columns = firstRow.Table.Columns
                 .Cast<DataColumn>()
                 .Where(col => col.ColumnName != "Table" && col.ColumnName != "Id") // ⬅️ Exclude columns Table and Id
                 .ToDictionary(col => col.ColumnName, col => col.DataType);
-            
+
             newColumns[table] = columns;
 
             var rows = dataRows
@@ -103,7 +118,7 @@ else
 
         _gridData = newGridData;
         _columns = newColumns;
-        
+
         StateHasChanged();
     }
 
@@ -111,7 +126,7 @@ else
     static Dictionary<string, List<DataRow>> LoadDiff(Dictionary<string, DataTable> previousScan, Dictionary<string, DataTable> lastScan)
     {
         var diff = new Dictionary<string, List<DataRow>>();
-        
+
         foreach (var table in lastScan.Keys)
         {
             if (!previousScan.TryGetValue(table, out var previous)) continue;
@@ -141,14 +156,14 @@ else
                 .Where(row => previousDict.ContainsKey(row["Id"]) && !row.ItemArray.SequenceEqual(previousDict[row["Id"]].ItemArray))
                 .ToList();
             foreach (var row in updatedNew) row["Operation"] = "UPDATED_NEW";
-            
+
             var acc = new List<DataRow>();
             acc.AddRange(added);
             acc.AddRange(removed);
             acc.AddRange(updatedOld);
             acc.AddRange(updatedNew);
             foreach (var row in acc) row["Table"] = table;
-            
+
             diff[table] = acc
                 .OrderBy(x => x["Id"])
                 .ThenBy(x => x["Operation"], new CustomOperationComparer())
@@ -164,16 +179,16 @@ else
         if (!previous.Columns.Contains(table))
         {
             previous.Columns.Add(table, typeof(string));
-            previous.Columns[table]?.SetOrdinal(0);                
+            previous.Columns[table]?.SetOrdinal(0);
         }
 
         const string operation = "Operation";
         if (previous.Columns.Contains(operation)) return;
-        
+
         previous.Columns.Add(operation, typeof(string));
         previous.Columns[operation]?.SetOrdinal(1);
     }
-    
+
     static Expression<Func<T, TP>> GetPropertyLambdaExpression<T, TP>(string propertyName)
     {
         var param = Expression.Parameter(typeof(T), "x");

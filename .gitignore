@@ -7,6 +7,7 @@
 .sonarqube
 
 report.csv
+[Dd]ist
 
 # dotenv files
 .env
