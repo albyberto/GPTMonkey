@@ -8,11 +8,20 @@ using Microsoft.Extensions.Options;
 
 namespace Lapo.Mud.Services;
 
-public class DatabaseService(IConfiguration configuration, IOptions<AluOptions> options)
+public class DatabaseService
 {
-    readonly string _connectionString = configuration.GetConnectionString("DefaultConnection") ?? throw new ArgumentNullException(nameof(configuration), "Connection string not found.");
-    readonly string _primaryKeyColumn = options.Value.PrimaryKeyColumn;
-    
+    readonly string _connectionString;
+    readonly string _primaryKeyColumn;
+
+    public DatabaseService(IConfiguration configuration, IOptions<AluOptions> options, ILogger<DatabaseService> logger)
+    {
+        _connectionString = configuration.GetConnectionString("DefaultConnection") ?? throw new ArgumentNullException(nameof(configuration), "Connection string not found.");
+        _primaryKeyColumn = options.Value.PrimaryKeyColumn;
+        
+        logger.LogInformation("Primary key column: {PrimaryKeyColumn}", _primaryKeyColumn);
+        logger.LogInformation("Connection string: {ConnectionString}", _connectionString);
+    }
+
     public async Task<DataTable> QueryAsync(string table, string? where = null, int? top = null, OrderByDirection direction = OrderByDirection.Desc)
     {
         if (string.IsNullOrWhiteSpace(table))
