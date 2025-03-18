@@ -14,8 +14,8 @@
     <Columns>
         <PropertyColumn Property="x => x.Table" Title="Table" />
         <PropertyColumn Property="x => x.Where" Title="Where" />
-        <PropertyColumn Property="x => x.Top" Title="Top" />
-        <PropertyColumn Property="x => x.Direction" Title="Direction" />
+        @* <PropertyColumn Property="x => x.Top" Title="Top" /> *@
+        @* <PropertyColumn Property="x => x.Direction" Title="Direction" /> *@
         <TemplateColumn>
             <CellTemplate Context="context">
                 <MudButton OnClick="@(() => RemoveItem(context.Item))" StartIcon="@Icons.Material.Outlined.Delete" Color="Color.Error" Variant="Variant.Text">Remove</MudButton>
