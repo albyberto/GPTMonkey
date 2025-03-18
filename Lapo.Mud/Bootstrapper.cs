@@ -16,6 +16,7 @@ public static class Bootstrapper
     {
         builder.Services.AddSingleton<ConfigurationService>();
         builder.Services.AddSingleton<CsvService>();
+        builder.Services.AddSingleton<MarkdownService>();
         builder.Services.AddSingleton<TableService>();
         builder.Services.AddScoped<DatabaseService>();
         builder.Services.AddScoped<AluService>();

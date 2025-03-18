@@ -52,6 +52,7 @@ else
 {
     [Inject] ConfigurationService ConfigurationService { get; set; } = null!;
     [Inject] CsvService CsvService { get; set; } = null!;
+    [Inject] MarkdownService MarkdownService { get; set; } = null!;
     [Inject] DatabaseService DatabaseService { get; set; } = null!;
     [Inject] AluService AluService { get; set; } = null!;
     [Inject] TableService TableService { get; set; } = null!;
@@ -104,6 +105,7 @@ else
                 Logger.LogInformation("Grid data and columns built");
                 
                 CsvService.Write(_diff);
+                await MarkdownService.WriteAsync(_diff);
                 
                 Logger.LogInformation("CSV written");
 
@@ -127,7 +129,11 @@ else
 
         var dialog = await DialogService.ShowAsync<AlertDialog>("Delete", parameters, options);
         var result = await dialog.Result;
-        
-        if (!result?.Canceled ?? true) CsvService.Delete();
+
+        if (!result?.Canceled ?? true)
+        {
+            CsvService.Delete();
+            MarkdownService.Delete();
+        }
     }
 }
