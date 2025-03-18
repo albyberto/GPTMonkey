@@ -2,6 +2,8 @@
 using System.Globalization;
 using CsvHelper;
 using CsvHelper.Configuration;
+using Lapo.Mud.Options;
+using Microsoft.Extensions.Options;
 
 namespace Lapo.Mud.Services;
 
@@ -9,10 +11,9 @@ public class CsvService
 {
     readonly string _path;
 
-    public CsvService(string path)
+    public CsvService(IOptions<CsvOptions> options)
     {
-        var baseDirectory = AppContext.BaseDirectory;
-        path = Path.Combine(baseDirectory, $"{path}.csv");
+        var path = Path.Combine(AppContext.BaseDirectory, $"{options.Value.Path}.csv");
 
         if (!File.Exists(path)) File.Create(path).Dispose();
 

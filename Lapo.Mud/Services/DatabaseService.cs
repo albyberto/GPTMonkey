@@ -2,15 +2,18 @@
 using System.Text;
 using Dapper;
 using Lapo.Mud.Enums;
+using Lapo.Mud.Options;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Options;
 
 namespace Lapo.Mud.Services;
 
-public class DatabaseService(IConfiguration configuration)
+public class DatabaseService(IConfiguration configuration, IOptions<AluOptions> options)
 {
     readonly string _connectionString = configuration.GetConnectionString("DefaultConnection") ?? throw new ArgumentNullException(nameof(configuration), "Connection string not found.");
-
-    public async Task<DataTable> QueryAsync(string table, string primaryKeyColumn, string? where = null, int? top = null, OrderByDirection direction = OrderByDirection.Desc)
+    readonly string _primaryKeyColumn = options.Value.PrimaryKeyColumn;
+    
+    public async Task<DataTable> QueryAsync(string table, string? where = null, int? top = null, OrderByDirection direction = OrderByDirection.Desc)
     {
         if (string.IsNullOrWhiteSpace(table))
             throw new ArgumentException("Table name cannot be null or empty.", nameof(table));
@@ -36,9 +39,9 @@ public class DatabaseService(IConfiguration configuration)
         var dataTable = new DataTable();
         dataTable.Load(reader);
         
-        dataTable.Columns.Add(primaryKeyColumn, typeof(int));
-        dataTable.Columns[primaryKeyColumn]?.SetOrdinal(0);
-        foreach (DataRow row in dataTable.Rows) row[primaryKeyColumn] = row[primaryKey];
+        dataTable.Columns.Add(_primaryKeyColumn, typeof(int));
+        dataTable.Columns[_primaryKeyColumn]?.SetOrdinal(0);
+        foreach (DataRow row in dataTable.Rows) row[_primaryKeyColumn] = row[primaryKey];
 
         return dataTable;
     }

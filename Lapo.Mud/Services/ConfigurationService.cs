@@ -1,4 +1,6 @@
 ﻿using Lapo.Mud.Components.Pages;
+using Lapo.Mud.Options;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 
 namespace Lapo.Mud.Services;
@@ -8,14 +10,13 @@ public class ConfigurationService
     readonly string _path;
     readonly string _section;
 
-    public ConfigurationService(string path, string section)
+    public ConfigurationService(IOptions<ConfigurationOptions> options)
     {
-        var baseDirectory = AppContext.BaseDirectory;
-        path = Path.Combine(baseDirectory, $"{path}.json");
+        var path = Path.Combine(AppContext.BaseDirectory, $"{options.Value.Path}.json");
         if (!File.Exists(path)) throw new FileNotFoundException("Configuration file not found.", path);
 
         _path = path;
-        _section = section;
+        _section = options.Value.Section;
     }
 
     public async Task<T?> ReadAsync<T>(string key)

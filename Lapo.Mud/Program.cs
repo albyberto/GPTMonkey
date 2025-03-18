@@ -1,6 +1,6 @@
+using Lapo.Mud;
 using MudBlazor.Services;
 using Lapo.Mud.Components;
-using Lapo.Mud.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,9 +11,8 @@ builder.Services.AddMudServices();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddSingleton(_ => new ConfigurationService("appsettings", "Configuration"));
-builder.Services.AddSingleton(_ => new CsvService("report"));
-builder.Services.AddScoped<DatabaseService>();
+builder.AddOptions();
+builder.AddServices();
 
 var app = builder.Build();
 
