@@ -52,4 +52,10 @@ public class CsvService
             _logger.LogInformation($"Wrote {data.Count} rows for table '{key}'.");
         }
     }
+    
+    public void Delete()
+    {
+        File.Delete(_path);
+        _logger.LogInformation($"Deleted file '{_path}'.");
+    }
 }
