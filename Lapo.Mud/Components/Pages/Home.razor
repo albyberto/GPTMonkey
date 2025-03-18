@@ -51,6 +51,7 @@ else
     [Inject] DatabaseService DatabaseService { get; set; } = null!;
     [Inject] AluService AluService { get; set; } = null!;
     [Inject] TableService TableService { get; set; } = null!;
+    [Inject] ILogger<Home> Logger { get; set; } = null!;
 
     readonly Dictionary<string, DataTable> _lastScan = [];
     Dictionary<string, DataTable> _previousScan = [];
@@ -81,21 +82,30 @@ else
                 if (!_previousScan.Any())
                 {
                     _previousScan = new(_lastScan);
+                    Logger.LogInformation("First scan");
+
                     return;
                 }
 
                 _diff.Clear();
                 _diff = AluService.LoadDiff(_previousScan, _lastScan);
+                
+                Logger.LogInformation("Changes detected");
 
                 var (newGridData, newColumns) = TableService.BuildTable(_diff);
                 _items = newGridData;
                 _columns = newColumns;
                 
+                Logger.LogInformation("Grid data and columns built");
+                
                 CsvService.Write(_diff);
+                
+                Logger.LogInformation("CSV written");
 
                 _previousScan.Clear();
                 AluService.ClearDataTable(_lastScan);
                 _previousScan = new(_lastScan);
-            
+                
+                Logger.LogInformation("Previous scan updated");
     }
 }

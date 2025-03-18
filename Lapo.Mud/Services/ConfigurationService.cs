@@ -10,13 +10,15 @@ public class ConfigurationService
     readonly string _path;
     readonly string _section;
 
-    public ConfigurationService(IOptions<ConfigurationOptions> options)
+    public ConfigurationService(IOptions<ConfigurationOptions> options, ILogger<ConfigurationService> logger)
     {
         var path = Path.Combine(AppContext.BaseDirectory, $"{options.Value.Path}.json");
         if (!File.Exists(path)) throw new FileNotFoundException("Configuration file not found.", path);
 
         _path = path;
         _section = options.Value.Section;
+        
+        logger.LogInformation($"{nameof(ConfigurationService)} initialized with path '{_path}' and section '{_section}'.");
     }
 
     public async Task<T?> ReadAsync<T>(string key)

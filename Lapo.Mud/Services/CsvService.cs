@@ -9,15 +9,19 @@ namespace Lapo.Mud.Services;
 
 public class CsvService
 {
+    readonly ILogger<CsvService> _logger;
     readonly string _path;
 
-    public CsvService(IOptions<CsvOptions> options)
+    public CsvService(IOptions<CsvOptions> options, ILogger<CsvService> logger)
     {
+        _logger = logger;
         var path = Path.Combine(AppContext.BaseDirectory, $"{options.Value.Path}.csv");
 
-        if (!File.Exists(path)) File.Create(path).Dispose();
+        if (!File.Exists(path)) File.Create(path);
 
         _path = path;
+        
+        _logger.LogInformation($"CsvService initialized with path '{_path}'.");
     }
 
     public void Write(Dictionary<string, List<DataRow>> diff)
@@ -44,6 +48,8 @@ public class CsvService
                 foreach (var item in row) csv.WriteField(item);
                 csv.NextRecord();
             }
+            
+            _logger.LogInformation($"Wrote {data.Count} rows for table '{key}'.");
         }
     }
 }
