@@ -52,6 +52,13 @@ public class CsvService
             _logger.LogInformation($"Wrote {data.Count} rows for table '{key}'.");
         }
     }
+
+    public void Backup()
+    {
+        var backupPath = Path.Combine(AppContext.BaseDirectory, $"{Path.GetFileNameWithoutExtension(_path)}_backup_{DateTime.Now:yyyyMMddHHmmss}{Path.GetExtension(_path)}");
+        File.Copy(_path, backupPath, overwrite: true);
+        _logger.LogInformation($"Backup created at '{backupPath}'.");
+    }
     
     public void Delete()
     {

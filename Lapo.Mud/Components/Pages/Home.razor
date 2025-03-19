@@ -5,23 +5,27 @@
 
 <PageTitle>Home</PageTitle>
 
-@if (_progress)
-{
-    <MudButton Disabled="true" FullWidth="true" Variant="Variant.Outlined" ButtonType="ButtonType.Button"StartIcon="@Icons.Material.Outlined.Search" Color="Color.Primary">
-        <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" />
-        <MudText Class="ml-2">Processing</MudText>
-    </MudButton>
-}
-else
-{
-    <MudButton @onclick="ScanAsync" FullWidth="true" Variant="Variant.Outlined" ButtonType="ButtonType.Button" StartIcon="@Icons.Material.Outlined.Search" Color="Color.Primary">
-        Scan
-    </MudButton>
-}
+<div class="d-flex d-flex-row gap-2 justify-content-between">
+    
+    @if (_progress)
+    {
+        <MudButton Disabled="true" FullWidth="true" Variant="Variant.Outlined" ButtonType="ButtonType.Button"StartIcon="@Icons.Material.Outlined.Search" Color="Color.Primary">
+            <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" />
+            <MudText Class="ml-2">Processing</MudText>
+        </MudButton>
+    }
+    else
+    {
+        <MudButton @onclick="RunScanAsync" FullWidth="true" Variant="Variant.Outlined" ButtonType="ButtonType.Button" StartIcon="@Icons.Material.Outlined.Search" Color="Color.Primary">
+            Scan
+        </MudButton>
+    }
 
-<MudButton @onclick="DeleteReportAsync" Class="mt-2" FullWidth="true" Variant="Variant.Outlined" ButtonType="ButtonType.Button" StartIcon="@Icons.Material.Outlined.Delete" Color="Color.Error">
-    Delete Report
-</MudButton>
+    <MudButton @onclick="BackupAndDeleteReportAsync" FullWidth="true" Variant="Variant.Outlined" ButtonType="ButtonType.Button" StartIcon="@Icons.Material.Outlined.Delete" Color="Color.Secondary">
+        Backup & Delete Report
+    </MudButton>
+    
+</div>
 
 @if (_diff.Count == 0)
 {
@@ -67,7 +71,9 @@ else
     
     private bool _progress;
     
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync() => RunScanAsync();
+
+    async Task RunScanAsync()
     {
         _progress = true;
         await Task.Run(async () => await ScanAsync());
@@ -116,12 +122,12 @@ else
                 Logger.LogInformation("Previous scan updated");
     }
     
-    private async Task DeleteReportAsync()
+    private async Task BackupAndDeleteReportAsync()
     {
         var parameters = new DialogParameters<AlertDialog>
         {
-            { x => x.ContentText, "Do you really want to delete report file? This process cannot be undone." },
-            { x => x.ButtonText, "Delete" },
+            { x => x.ContentText, "Do you really want to backup and delete report file?" },
+            { x => x.ButtonText, "Backup and Delete" },
             { x => x.Color, Color.Error }
         };
 
@@ -132,7 +138,11 @@ else
 
         if (!result?.Canceled ?? true)
         {
+            
+            CsvService.Backup();
             CsvService.Delete();
+            
+            MarkdownService.Backup();
             MarkdownService.Delete();
         }
     }

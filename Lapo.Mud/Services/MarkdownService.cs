@@ -63,6 +63,13 @@ public class MarkdownService
         await File.AppendAllTextAsync(_path, sb.ToString());
         _logger.LogInformation($"Markdown file written to '{_path}'.");
     }
+    
+    public void Backup()
+    {
+        var backupPath = Path.Combine(AppContext.BaseDirectory, $"{Path.GetFileNameWithoutExtension(_path)}_backup_{DateTime.Now:yyyyMMddHHmmss}{Path.GetExtension(_path)}");
+        File.Copy(_path, backupPath, overwrite: true);
+        _logger.LogInformation($"Backup created at '{backupPath}'.");
+    }
 
     public void Delete()
     {
